@@ -1,7 +1,6 @@
 # Verzug: wann ein Regelgesetz den Takt nicht mehr hält – Streamlit-Demo
 
-<!-- TODO nach dem Deploy: direkt hierher den Live-Link setzen (Leerzeile davor und danach):
-**[→ Demo live ausprobieren](https://sebastianhanisch-regelung-verzug-demo.streamlit.app/)** -->
+**[→ Demo live ausprobieren](https://sebastianhanisch-regelung-verzug-demo.streamlit.app/)**
 
 Demo zum Thema **Regelung (von LQR bis MPC)** auf der Website „Sebastian Hanisch – Operations Research und Machine Learning“. Jede Demo dazu hebt eine Annahme auf; die Schwäche, an der diese ansetzt: **Entwurf und
 Anwendung geschehen im selben Takt.** Das LQR-Gesetz ([`lqr-riccati-demo`](https://github.com/sebastian-hanisch/lqr-riccati-demo)), der endliche Horizont ([`horizont-falle-demo`](https://github.com/sebastian-hanisch/horizont-falle-demo)),
