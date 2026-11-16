@@ -361,7 +361,7 @@ with tab_lyap:
     m3.metric("Beste lineare Verstärkung ohne Vorhersage", de(sinfo["stat_static"], 2) if sinfo["stat_static"] is not None else "—",
               delta="vorgerechnet, R = 1 und d ≤ 4" if sinfo["stat_static"] is not None else "nur für R = 1 und d ≤ 4 vorgerechnet", delta_color="off")
     st.caption("Kosten je Periode E[x'Qx + R u²] unter Störkraft N(0, 1), stationär aus der Lyapunov-Gleichung; die Vorhersage ist lokal kostenminimal unter linearen Gesetzen der verfügbaren Information "
-               "(gemessen an zufälligen Störungen des Gewinns).")
+               "(gemessen: keine zufällige Störung des Gewinns senkt die Kosten).")
 with tab_mc:
     st.markdown("Gegenprobe mit einem Zufallslauf: Störkraft aus dem ganzzahligen SplitMix64 (Zufalls-Seed), Mittel über die Perioden, die ersten 1 000 ausgenommen.")
     cc1, cc2 = st.columns(2)
@@ -390,7 +390,7 @@ st.markdown(
 | Annahme | Was passiert, wenn sie verletzt ist | Wer setzt an |
 |---|---|---|
 | **Zustand wird exakt gemessen, nur um d Perioden verspätet** | Mit Messrauschen und Vorhersage nicht gemessen; ein Beobachter für den verspäteten Zustand ist nicht gebaut. | [`kalman-filter-demo`](https://github.com/sebastian-hanisch/kalman-filter-demo) (ohne Verzug) |
-| **Der Verzug ist ganzzahlig, fest und bekannt** | Mit falsch angenommenem Verzug und R ≤ 1 ist die Vorhersage in 2 000 von 2 000 Zufallszellen instabil (Experiment 5); Schwankung der Rechenzeit (Jitter, Überspringen eines Taktes) ist nicht gemessen. | – |
+| **Der Verzug ist ganzzahlig, fest und bekannt** | Mit falsch angenommenem Verzug und R ≤ 1 ist die Vorhersage in 2 000 von 2 000 Zufallszellen instabil (Experiment 5), getestet für d = 1 bis 4 und bei großem R nicht; Schwankung der Rechenzeit (Jitter, Überspringen eines Taktes) ist nicht gemessen. | – |
 | **Das Streckenmodell stimmt (b = 1)** | Die Toleranz gegen b schrumpft mit d von beiden Seiten (R = 1: von 0,01 bis 1,94 bei d = 0 auf 0,77 bis 1,25 bei d = 5). | – |
 | **Keine Stellgrenzen** | Ein MPC mit Beschränkungen und Rechenzeit ist nicht gemessen. | [`mpc-stellgrenzen-demo`](https://github.com/sebastian-hanisch/mpc-stellgrenzen-demo) |
 | **Keine Störung** | Bei konstanter Störkraft wächst der Dauerfehler mit der Vorhersage (Faktor 2,24 bei d = 1, R = 1, gegenüber d = 0). | [`offsetfrei-demo`](https://github.com/sebastian-hanisch/offsetfrei-demo) |
@@ -460,7 +460,7 @@ $$\Gamma_0 = \begin{pmatrix}(1-\tau)^2/2\\ 1-\tau\end{pmatrix},\qquad \Gamma_1 =
 die Regelgüte stark mindern oder die Schleife instabil machen könne (nichtlineares MPC; hier wird davon nichts nachgerechnet). Wolf, Würth und Marquardt (CDC 2011, Wortlaut gelesen): ein ignorierter Rechenverzug gefährdet die Stabilität,
 als Faustregel solle das Verhältnis von Verzug zu Abtastzeit deutlich unter 1 liegen. Orzechowska (Dissertation Coventry 2014, nur das Abstract gelesen) löst eine Lieferzeit im Lager mit einem Smith-Prädiktor; Åström und Murray, Übung 12.8
 (nur der Aufgabentext gelesen). Diese Demo sagt „Vorhersage“, nicht „Smith-Prädiktor“, und behauptet keine Gleichheit mit dem dortigen Regler. Rawlings, Mayne und Diehl, Abschnitt 2.5.1 (S. 132, in eigenen Worten): beim unbeschränkten
-Problem mit Terminalkosten aus der DARE hängt der Gewinn der ersten Stufe nicht vom Horizont ab; hier gemessen für N = 1 bis 12 (README, Befund B9).
+Problem mit Terminalkosten aus der DARE hängt der Gewinn der ersten Stufe nicht vom Horizont ab; hier gemessen für N = 1 bis 12 (README, Befund B10).
         """
     )
 
