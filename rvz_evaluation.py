@@ -226,7 +226,8 @@ def verdict_scalar(row: dict) -> tuple[str, str]:
 
 @lru_cache(maxsize=1)
 def krit_rows() -> list[dict]:
-    """d = 1 … 8: R_krit, der gerade stabile Entwurf R = 1,2 · R_krit mit seiner Abklingzeit und die Vorhersage mit K(R = 1) (x₀ = (1, 0))."""
+    """d = 1 … 8: R_krit, der gerade stabile Entwurf R = 1,2 · R_krit mit seiner Abklingzeit (mit Verzug d und, zum fairen Vergleich, ohne Verzug bei demselben R)
+    und die Vorhersage mit K(R = 1) (x₀ = (1, 0))."""
     k1p, k2p = K.gain(C.EVAL_R)
     rows = []
     for d in range(1, C.D_MAX + 1):
@@ -235,9 +236,10 @@ def krit_rows() -> list[dict]:
         k1, k2 = K.gain(Rs)
         rho = K.rho_poly(k1, k2, d)
         dec, _ = decay_of(k1, k2, d, 0, rho)
+        dec0, _ = decay_of(k1, k2, 0, 0, K.rho_poly(k1, k2, 0))      # derselbe große R ohne Verzug: der Verzug allein macht aus dec0 die Zahl dec
         rho_p = K.rho_loop(k1p, k2p, d, d)
         dec_p, _ = decay_of(k1p, k2p, d, d, K.rho_poly(k1p, k2p, 0))   # die Vorhersage-Schleife hat die Wurzeln des Entwurfs ohne Verzug
-        rows.append({"d": d, "rkrit": rk, "R_soft": Rs, "rho_soft": rho, "decay_soft": dec, "decay_pred": dec_p, "rho_pred": rho_p})
+        rows.append({"d": d, "rkrit": rk, "R_soft": Rs, "rho_soft": rho, "decay_soft": dec, "decay_d0": dec0, "decay_pred": dec_p, "rho_pred": rho_p})
     return rows
 
 
@@ -246,7 +248,8 @@ def verdict_krit(d: int, rows: list[dict]) -> tuple[str, str]:
         return "info", "Ohne Verzug (d = 0) gibt es keine Grenze: alle 4 001 gemessenen Entwürfe (R = 10⁻³ bis 10⁶, Q = I) sind stabil. Wählen Sie d ≥ 1."
     r = rows[d - 1]
     soft = f"braucht {fmt_int(r['decay_soft'])} Perioden" if r["decay_soft"] is not None else "klingt innerhalb des Horizonts nicht ab"
-    return "info", (f"d = {d}: R_krit = {fmt_R(r['rkrit'])}. Der gerade stabile Entwurf (R = {fmt_R(r['R_soft'])}) {soft}, mit Vorhersage (K aus R = 1) {r['decay_pred']} "
+    d0 = f" (derselbe R ohne Verzug: {r['decay_d0']})" if r.get("decay_d0") is not None else ""
+    return "info", (f"d = {d}: R_krit = {fmt_R(r['rkrit'])}. Der gerade stabile Entwurf (R = {fmt_R(r['R_soft'])}) {soft}{d0}, mit Vorhersage (K aus R = 1) {r['decay_pred']} "
                     f"Perioden (Wagen, Q = I, Stoß x₀ = (1, 0), Abklingzeit bis 1 % der Spitze).")
 
 
@@ -376,7 +379,7 @@ def verdict_vorhersage(d: int, x0name: str, rows: list[LawRow], R: float, decay0
     stat = next((r for r in rows if r.key == C.LAWS[3]), None)
     if stat is not None and stat.extra is not None:
         s += f"Die beste statische Verstärkung braucht {stat.decay} Perioden und kostet {pct(stat.extra, 1, True)}. "
-    s += f"Jede statische Verstärkung ohne Vorhersage hat ρ ≥ 2/(d + 2) = {fmt_rho(2.0 / (d + 2))}; Deadbeat (ρ = 0) gibt es nur ohne Verzug."
+    s += f"Jede statische Verstärkung ohne Vorhersage hat ρ ≥ 2/(d + 2) = {fmt_rho(2.0 / (d + 2))}; Deadbeat (ρ = 0) gibt es ohne Vorhersage nur ohne Verzug."
     return "info", s
 
 
@@ -527,8 +530,9 @@ def verdict_kern2(d: int, rows: list[dict]) -> tuple[str, str]:
         return "info", "Ohne Verzug sind alle gemessenen Entwürfe stabil (R = 10⁻³ bis 10⁶, Q = I); wählen Sie d ≥ 1, um den Preis des weichen Entwurfs zu sehen."
     r = rows[d - 1]
     soft = f"{fmt_int(r['decay_soft'])} Perioden" if r["decay_soft"] is not None else "mehr als den Horizont"
-    return "info", (f"Für d = {d} muss R mindestens {fmt_R(r['rkrit'])} sein; der gerade stabile Entwurf (R = {fmt_R(r['R_soft'])}) braucht {soft} bis zur Ruhe, ohne Verzug "
-                    f"(R = 1) sind es 5.")
+    d0 = f"; derselbe R ohne Verzug braucht {r['decay_d0']}" if r.get("decay_d0") is not None else ""
+    return "info", (f"Für d = {d} muss R mindestens {fmt_R(r['rkrit'])} sein; der gerade stabile Entwurf (R = {fmt_R(r['R_soft'])}) braucht {soft} bis zur Ruhe{d0}, "
+                    f"der Entwurf R = 1 ohne Verzug 5.")
 
 
 def verdict_kern3(d: int, J_extra: float | None, lo: float | None, hi: float | None, lo0: float | None, hi0: float | None, R: float) -> tuple[str, str]:

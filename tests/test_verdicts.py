@@ -63,10 +63,10 @@ def test_verdict_scalar_three_branches():
 
 
 def test_verdict_krit_names_critical_r_and_both_decay_times():
-    rows = [{"d": 1, "rkrit": 6.854, "R_soft": 8.225, "decay_soft": 213, "decay_pred": 6, "rho_soft": 0.99, "rho_pred": 0.42},
-            {"d": 2, "rkrit": 82.79, "R_soft": 99.3, "decay_soft": None, "decay_pred": 7, "rho_soft": 0.999, "rho_pred": 0.42}]
+    rows = [{"d": 1, "rkrit": 6.854, "R_soft": 8.225, "decay_soft": 213, "decay_d0": 11, "decay_pred": 6, "rho_soft": 0.99, "rho_pred": 0.42},
+            {"d": 2, "rkrit": 82.79, "R_soft": 99.3, "decay_soft": None, "decay_d0": 21, "decay_pred": 7, "rho_soft": 0.999, "rho_pred": 0.42}]
     kind, text = ev.verdict_krit(1, rows)
-    assert kind == "info" and "R_krit = 6,85" in text and "(R = 8,22) braucht 213 Perioden" in text and "mit Vorhersage (K aus R = 1) 6 Perioden" in text
+    assert kind == "info" and "R_krit = 6,85" in text and "(R = 8,22) braucht 213 Perioden (derselbe R ohne Verzug: 11)" in text and "mit Vorhersage (K aus R = 1) 6 Perioden" in text
     assert "klingt innerhalb des Horizonts nicht ab" in ev.verdict_krit(2, rows)[1]
     assert f"alle 4{NB}001 gemessenen Entwürfe (R = 10⁻³ bis 10⁶, Q = I) sind stabil" in ev.verdict_krit(0, rows)[1]
 
@@ -92,6 +92,7 @@ def test_verdict_vorhersage_with_unstable_and_stable_plain_gain_and_static_row()
     assert "(ohne Verzug" not in ev.verdict_vorhersage(1, "(1, 0)", rows, 1.0)[1]
     assert "ohne Vorhersage ist instabil (ρ = 1,193)" in text
     assert "braucht 21 Perioden und kostet +57,6" in text and "ρ ≥ 2/(d + 2) = 0,667" in text
+    assert "Deadbeat (ρ = 0) gibt es ohne Vorhersage nur ohne Verzug" in text
     rows[1] = _row(C.LAWS[1], 0.8, 0.9, 40)
     assert "hält (ρ = 0,900), kostet aber +80,0" in ev.verdict_vorhersage(1, "(1, 0)", rows, 1.0)[1]
     assert "alle vier Gesetze dasselbe" in ev.verdict_vorhersage(0, "(1, 0)", rows[:2], 1.0)[1]
@@ -132,8 +133,9 @@ def test_kernfragen_texts():
     kind, text = ev.verdict_kern1(1.0, (0.422, 1.193, 1.3, 1.3), 0.621)
     assert kind == "info" and "ganzzahlig bis d = 0 Perioden (ab d = 1 instabil, bis d = 3 geprüft)" in text and "θ* = 0,62" in text
     assert "Reglergrenze" in ev.verdict_kern1(1e4, (0.9, 0.9, 0.9), None)[1] and "bis θ = 3 Perioden stabil" in ev.verdict_kern1(1e4, (0.9, 0.9, 0.9), None)[1]
-    rows = [{"d": 1, "rkrit": 6.854, "R_soft": 8.225, "decay_soft": 213}]
+    rows = [{"d": 1, "rkrit": 6.854, "R_soft": 8.225, "decay_soft": 213, "decay_d0": 11}]
     assert "mindestens 6,85" in ev.verdict_kern2(1, rows)[1] and "braucht 213 Perioden" in ev.verdict_kern2(1, rows)[1]
+    assert "derselbe R ohne Verzug braucht 11, der Entwurf R = 1 ohne Verzug 5" in ev.verdict_kern2(1, rows)[1]
     assert "alle gemessenen Entwürfe stabil (R = 10⁻³ bis 10⁶, Q = I)" in ev.verdict_kern2(0, rows)[1]
     kind, text = ev.verdict_kern3(1, 0.339, 0.335, 1.531, 0.01, 1.936, 1.0)
     assert "Mehrkosten +33,9" in text and "von 0,34 bis 1,53" in text and "von 0,01 bis 1,94" in text

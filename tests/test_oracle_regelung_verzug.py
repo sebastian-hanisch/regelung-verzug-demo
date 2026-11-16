@@ -30,7 +30,7 @@ def _uni(rng, lo, hi):
 
 
 def test_rho_from_polynomial_equals_rho_from_state_matrix_800_cases():
-    """Gemessen im Scratch-Lauf: größte Abweichung 5,1·10⁻¹⁵ (800 Fälle); hier 200 Fälle, Toleranz 10⁻⁹."""
+    """Gemessen in einem früheren Rechenlauf: größte Abweichung 5,1·10⁻¹⁵ (800 Fälle); hier 200 Fälle, Toleranz 10⁻⁹."""
     rng = SplitMix64(1809)
     worst = 0.0
     for i in range(200):
@@ -261,7 +261,7 @@ def test_first_stage_gain_of_the_n_step_problem_equals_k_for_dare_terminal_cost(
 
 
 def test_monte_carlo_equals_the_lyapunov_cost_within_a_3_percent_band():
-    """d = 2, Vorhersage, R = 1, Zufalls-Seed 1814, 40 000 Perioden (Scratch-Lauf mit 400 000: 0,28 %); Band 3 % (K.monte_carlo_cost nutzt den ganzzahligen SplitMix64)."""
+    """d = 2, Vorhersage, R = 1, Zufalls-Seed 1814, 40 000 Perioden (früherer Rechenlauf mit 400 000: 0,28 %); Band 3 % (K.monte_carlo_cost nutzt den ganzzahligen SplitMix64)."""
     k1, k2 = K.gain(1.0)
     G = K.pred_gain(k1, k2, 2)
     mc = K.monte_carlo_cost(G, 2, 1.0, 40000, 1814)

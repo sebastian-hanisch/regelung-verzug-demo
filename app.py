@@ -1,7 +1,7 @@
 """Verzug: wann ein Regelgesetz den Takt nicht mehr hält - interaktive Konzept-Demo
 Sebastian Hanisch - Operations Research und Machine Learning
 
-Stück 9 der Linie „Regelung (von LQR bis MPC)“: ein Wagen (Doppelintegrator, Q = I) mit einem LQR-Gesetz, dessen Rechenzeit d Perioden beträgt. Wie viel Verzug hält der Entwurf,
+Thema „Regelung (von LQR bis MPC)“: ein Wagen (Doppelintegrator, Q = I) mit einem LQR-Gesetz, dessen Rechenzeit d Perioden beträgt. Wie viel Verzug hält der Entwurf,
 was kostet es, ihn weich genug zu machen, und was bringt die Vorhersage des Zustands? Alles eigene Herleitung und Messung in diesem Modell (rvz_dynamics.py).
 
 Lauffähig mit: streamlit run app.py
@@ -106,7 +106,7 @@ st.markdown(
     """
 Ein Regelgesetz, das **ohne Verzug** gerechnet wurde, läuft hier mit **d Perioden Rechenzeit**: Die Stellgröße steht erst d Takte nach der Messung bereit. Die Demo misst am **Wagen**
 (Doppelintegrator, Q = I, ohne Stellgrenzen), **wie viel Verzug ein LQR-Entwurf hält**, was es kostet, den Entwurf dafür **weich** zu machen, und was die **Vorhersage** des Zustands bringt und
-vom Modell verlangt. Das ist Stück 9 der Linie „Regelung (von LQR bis MPC)“; das Thema am Lager steht in
+vom Modell verlangt. Die Demo gehört zum Thema „Regelung (von LQR bis MPC)“; Verzug am Lager steht in
 [`lager-lieferzeit-demo`](https://github.com/sebastian-hanisch/lager-lieferzeit-demo) und [`meldeverzug-demo`](https://github.com/sebastian-hanisch/meldeverzug-demo), dort ohne Reglerentwurf.
 Alle Formeln sind **eigene Herleitung und Messung in diesem Modell, bei diesen Parametern**; eine Neuheit wird nicht behauptet.
 
@@ -114,12 +114,23 @@ Weiter unten: die **Kernfragen** mit Verdikt, sechs Experimente (🔬), der Absc
 """
 )
 
+# erklaerseite:einfach:start (erzeugt von tools/set_demo_explainer.py (Website-Repo) aus tools/content/explainers/regelung-verzug-erklaert.json, nicht von Hand ändern)
+with st.expander("💬 In einfachen Worten"):
+    st.markdown(
+        """
+Stellen Sie sich einen Wagen vor, den ein Regelgesetz an eine Markierung bringen soll. Das Gesetz schaut auf Lage und Geschwindigkeit und legt fest, wie stark geschoben wird. Entworfen wurde es, als dauerte das Rechnen nichts. In der Wirklichkeit steht der Schub erst einige Perioden nach der Messung bereit: Das ist der **Verzug**. Die Demo misst an diesem Wagen (ohne Grenzen für den Schub, ohne Messrauschen), wie viel Verzug das Gesetz hält, was es kostet, es zurückhaltend genug einzustellen, und was die **Vorhersage** bringt: Der Regler rechnet aus dem verspäteten Bild und seinen eigenen Schüben den heutigen Stand voraus. Das hilft nur, wenn Modell und Verzug stimmen. Die Aussagen gelten für dieses Rechenmodell, nicht für eine echte Anlage.
+
+[Ausführlich und verständlich erklärt, mit Fachteil](https://sebastianhanisch.net/regelung-verzug-erklaert.html)
+        """
+    )
+# erklaerseite:einfach:end
+
 with st.expander("So funktioniert Verzug", expanded=True):
     st.markdown(
         """
 1. **Entwurf ohne Verzug:** Der Gewinn K kommt aus der diskreten Riccati-Gleichung (DARE) des Wagens mit Q = I und dem Kostengewicht R; das Gesetz ist u = −K x.
 2. **Verzug:** Mit d Perioden Rechenzeit gilt **u_k = −K x_(k−d)**; bis k = d − 1 liegt keine Messung vor, dort ist u = 0. **d = 0 heißt „Rechnen dauert nichts“**; u_k wirkt immer auf x_(k+1)
-   (das ist die „eine Periode Wirkverzug“ der Lager-Demos). Stellverzug und Messverzug haben ohne Vorhersage dieselben Wurzeln (gemessen, siehe README).
+   (das ist die „eine Periode Wirkverzug“ der Lager-Demos, dort L = 1; d Perioden Verzug entsprechen dort L = d + 1). Stellverzug und Messverzug haben ohne Vorhersage dieselben Wurzelbeträge (gemessen, siehe README).
 3. **Wurzeln:** Die Schleife hat das Polynom **P_d(z) = z^d (z − 1)² + k₂ (z − 1) + k₁** (K = (k₁, k₂), eigene Herleitung); sie hält, wenn alle Wurzeln im Einheitskreis liegen (Spektralradius ρ < 1).
 4. **Vorhersage:** Der Regler rechnet den Zustand um die d Perioden voraus (aus x_(k−d) und seinen eigenen Stellgrößen) und setzt u = −K x̂. Im exakten Modell ist die Schleife dann wieder die ohne Verzug,
    übrig bleiben d blinde Perioden. Sie verlangt dafür das richtige Modell und den richtigen Verzug (Experiment 5).
@@ -224,13 +235,16 @@ with tab_hand:
     st.markdown(f"Gerundeter Entwurf K = (2/5, 6/5) (nahe R = 1), Verzug d = {S.d}, alles in Brüchen (`fractions`), ohne Gleitkomma:")
     st.markdown(f"- Polynom **P_{S.d}(z) = {poly_str(h['poly'])}**; Schur–Cohn: **{'stabil' if h['stable'] else 'instabil'}** (ρ = {de(h['rho'], 4)} numerisch).")
     if h["roots_sum"] is not None:
-        st.markdown(f"- Summe der Wurzeln nach Vieta: {frac_str(h['roots_sum'])} (der Koeffizient von z^(d+1)); für jede statische Verstärkung folgt ρ ≥ 2/(d + 2).")
+        st.markdown(f"- Summe der Wurzeln nach Vieta: {frac_str(h['roots_sum'])} (der Koeffizient von z^(d+1)); für jede statische Verstärkung auf dem verspäteten Zustand allein (ohne Vorhersage) folgt ρ ≥ 2/(d + 2).")
     xs_n = ", ".join(f"({frac_str(a)}; {frac_str(b)})" for a, b in h["x_nopred"][1:])
     xs_p = ", ".join(f"({frac_str(a)}; {frac_str(b)})" for a, b in h["x_pred"][1:])
     st.markdown(f"- Bahn x₁ … x₄ ohne Vorhersage (Stoß x₀ = (1; 0), blinde Perioden u = 0): {xs_n}")
     st.markdown(f"- Bahn x₁ … x₄ mit Vorhersage: {xs_p}")
-    st.markdown(f"- Konstante Störkraft w = 1: Gleichgewichtslage x₁* = **{frac_str(h['x1_pred'])}** mit Vorhersage, {frac_str(h['x1_nopred'])} ohne (exakte Lösung des Gleichungssystems).")
-    st.caption("Handbeispiel: bei d = 1 ist P₁ = z³ − 2z² + (11/5) z − 4/5 nach Schur–Cohn instabil (ρ = 1,1725), mit Vorhersage x₂ = (1; −2/5), x₃ = (3/5; −8/25), und x₁* = 11/2.")
+    ohne_hinweis = "" if h["stable"] else "; diese Schleife ist ohne Vorhersage instabil und erreicht diese Lage nie, es ist nur der Fixpunkt der Gleichungen"
+    st.markdown(f"- Konstante Störkraft w = 1: Gleichgewichtslage x₁* = **{frac_str(h['x1_pred'])}** mit Vorhersage, {frac_str(h['x1_nopred'])} ohne (exakte Lösung des Gleichungssystems{ohne_hinweis}).")
+    st.caption("Handbeispiel: bei d = 1 ist P₁ = z³ − 2z² + (11/5) z − 4/5 nach Schur–Cohn instabil (ρ = 1,1725), mit Vorhersage x₂ = (1; −2/5), x₃ = (3/5; −8/25), und x₁* = 11/2. "
+               "Der Entwurf K = (2/5, 6/5) ist gerundet und nur grob nahe R = 1: bei R = 1 selbst ist ρ = 1,193 (mit d = 1), nicht 1,1725. "
+               "Die Herleitung der Gleichgewichtslage mit Vorhersage steht im Expander 📐 unter „Dauerfehler“.")
 
 st.markdown("---")
 
@@ -245,12 +259,14 @@ with c2:
     st.plotly_chart(build_decay_bars(krit), width="stretch", key="decay_bars_chart")
 st.dataframe(
     [{"d": r["d"], "R_krit": fmt_R(r["rkrit"]), "R (1,2 · R_krit)": fmt_R(r["R_soft"]), "ρ bei 1,2 · R_krit": de(r["rho_soft"], 4),
-      "Abklingzeit weich": fmt_int(r["decay_soft"]) if r["decay_soft"] is not None else "über Horizont", "Abklingzeit Vorhersage (R = 1)": r["decay_pred"]} for r in krit],
+      "Abklingzeit weich": fmt_int(r["decay_soft"]) if r["decay_soft"] is not None else "über Horizont",
+      "Abklingzeit ohne Verzug (gleicher R)": r["decay_d0"], "Abklingzeit Vorhersage (R = 1)": r["decay_pred"]} for r in krit],
     hide_index=True, width="stretch",
 )
 kind, text = ev.verdict_krit(S.d, krit)
 getattr(st, kind)(text)
-st.caption("Abklingzeit: letzte Periode mit ‖x_k‖ über 1 % der Spitze, Stoß x₀ = (1, 0). Warum R_krit so wächst, ist nicht erklärt; gemessen ist nur, bei welchem R und d die Schleife hält.")
+st.caption("Abklingzeit: letzte Periode mit ‖x_k‖ über 1 % der Spitze, Stoß x₀ = (1, 0). Die Spalte „ohne Verzug (gleicher R)“ zeigt, was der große R allein kostet; den Rest macht der Verzug "
+           "(der Entwurf R = 1 ohne Verzug braucht 5). Warum R_krit so wächst, ist nicht erklärt; gemessen ist nur, bei welchem R und d die Schleife hält.")
 
 st.markdown("---")
 
@@ -390,7 +406,7 @@ st.markdown(
 | Annahme | Was passiert, wenn sie verletzt ist | Wer setzt an |
 |---|---|---|
 | **Zustand wird exakt gemessen, nur um d Perioden verspätet** | Mit Messrauschen und Vorhersage nicht gemessen; ein Beobachter für den verspäteten Zustand ist nicht gebaut. | [`kalman-filter-demo`](https://github.com/sebastian-hanisch/kalman-filter-demo) (ohne Verzug) |
-| **Der Verzug ist ganzzahlig, fest und bekannt** | Mit falsch angenommenem Verzug und R ≤ 1 ist die Vorhersage in 2 000 von 2 000 Zufallszellen instabil (Experiment 5), getestet für d = 1 bis 4 und bei großem R nicht; Schwankung der Rechenzeit (Jitter, Überspringen eines Taktes) ist nicht gemessen. | – |
+| **Der Verzug ist ganzzahlig, fest und bekannt** | Mit falsch angenommenem Verzug (um höchstens 2 Perioden daneben) und R ≤ 1 ist die Vorhersage in 2 000 von 2 000 Zufallszellen instabil (Experiment 5), getestet für d = 1 bis 4 und bei großem R nicht; Schwankung der Rechenzeit (Jitter, Überspringen eines Taktes) ist nicht gemessen. | – |
 | **Das Streckenmodell stimmt (b = 1)** | Die Toleranz gegen b schrumpft mit d von beiden Seiten (R = 1: von 0,01 bis 1,94 bei d = 0 auf 0,77 bis 1,25 bei d = 5). | – |
 | **Keine Stellgrenzen** | Ein MPC mit Beschränkungen und Rechenzeit ist nicht gemessen. | [`mpc-stellgrenzen-demo`](https://github.com/sebastian-hanisch/mpc-stellgrenzen-demo) |
 | **Keine Störung** | Bei konstanter Störkraft wächst der Dauerfehler mit der Vorhersage (Faktor 2,24 bei d = 1, R = 1, gegenüber d = 0). | [`offsetfrei-demo`](https://github.com/sebastian-hanisch/offsetfrei-demo) |
@@ -402,20 +418,29 @@ st.markdown(
 st.markdown("---")
 
 with st.expander("📐 Mathematische Formulierung"):
+    # erklaerseite:lesehilfe:start (erzeugt von tools/set_demo_explainer.py (Website-Repo) aus tools/content/explainers/regelung-verzug-erklaert.json, nicht von Hand ändern)
     st.markdown(
         r"""
-**Lesehilfe.** Gegeben ist ein Wagen mit Zustand $x = (x_1, x_2)$ (Lage, Geschwindigkeit) und Kosten, die Abweichung und Stellaufwand abwägen. Gesucht ist, ob das Gesetz $u = -Kx$ bei $d$ Perioden Rechenzeit
-die Schleife stabil hält. Die Formeln sind eigene Herleitung in diesem Modell; das Modell ist vollständig mit Strecke, Entwurf, Verzug, Vorhersage, Kosten und Dauerfehler beschrieben (Stellgrenzen und Messrauschen gehören nicht dazu).
+**Lesehilfe.** Gegeben ist ein Wagen mit Zustand $x = (x_1, x_2)$ (Lage, Geschwindigkeit), Kosten, die Abweichung und Stellaufwand abwägen, und ein Verzug von $d$ Perioden zwischen Messung und Stellgröße. Gesucht ist, ob das Gesetz $u = -Kx$ bei $d$ Perioden Rechenzeit die Schleife stabil hält und was die Vorhersage ändert. Die Formeln sind eigene Herleitung in diesem Modell; das Modell ist vollständig mit Strecke, Entwurf, Verzug, Vorhersage, Kosten und Dauerfehler beschrieben (Stellgrenzen und Messrauschen gehören nicht dazu).
 
 | Symbol | Bedeutung |
 |---|---|
-| $A, B$ | Strecke $x_{k+1} = A x_k + B(b\,u_k + w)$ mit $A = \begin{pmatrix}1&1\\0&1\end{pmatrix}$, $B = (0, 1)^\top$ (Linie) bzw. $B = (\tfrac12, 1)^\top$ (Experiment 3) |
+| $x = (x_1, x_2)$ | Zustand des Wagens: Lage und Geschwindigkeit |
+| $u_k$ | Stellgröße (Schub) in Periode $k$ |
+| $A, B$ | Strecke $x_{k+1} = A x_k + B(b\,u_k + w)$ mit $A = \begin{pmatrix}1&1\\0&1\end{pmatrix}$, $B = (0, 1)^\top$ bzw. $B = (\tfrac12, 1)^\top$ (Rechenzeit als Bruchteil der Periode) |
 | $Q, R$ | Kostengewichte, $Q = I$, $R > 0$ |
 | $K = (k_1, k_2)$ | Gewinn des Entwurfs ohne Verzug aus der DARE |
 | $d, \theta = m + \tau$ | Verzug in ganzen Perioden bzw. Rechenzeit mit Bruchteil $\tau$ |
 | $b, w$ | wahre Beschleunigungsverstärkung (Regler nimmt 1 an) bzw. konstante Störkraft |
 | $\hat d$ | vom Regler angenommener Verzug |
+| $P_d(z)$, $\rho$ | charakteristisches Polynom der Schleife und sein Spektralradius (größter Wurzelbetrag); die Schleife hält, wenn $\rho$ unter 1 liegt |
 
+[Schritt für Schritt erklärt, mit Herleitung und Literatur](https://sebastianhanisch.net/regelung-verzug-erklaert.html#fachleute)
+        """
+    )
+    # erklaerseite:lesehilfe:end
+    st.markdown(
+        r"""
 **Entwurf ohne Verzug.** Die DARE und der Gewinn:
 
 $$P = Q + A^\top P A - A^\top P B\,(R + B^\top P B)^{-1} B^\top P A$$
@@ -430,7 +455,7 @@ Mit $B = (0, 1)^\top$ folgt für die Lage $x_{k+2} - 2x_{k+1} + x_k = u_k$ und d
 
 $$P_d(z) = z^d (z-1)^2 + k_2 (z - 1) + k_1$$
 
-Für $d \ge 1$ ist die Summe der Wurzeln $2$ (Koeffizient von $z^{d+1}$), also gilt für jede statische Verstärkung $\rho \ge 2/(d+2)$.
+Für $d \ge 1$ ist die Summe der Wurzeln $2$ (Koeffizient von $z^{d+1}$), also gilt für jede statische Verstärkung $K'$ auf dem verspäteten Zustand allein (ohne Vorhersage) $\rho \ge 2/(d+2)$; Deadbeat ($\rho = 0$) ist damit nicht erreichbar. Mit der Vorhersage ist das anders: Für $K = (1, 2)$ wird das Polynom der Schleife unten $z^{3d+2}$, also $\rho = 0$ (numerisch nur bis auf die Rechengenauigkeit).
 
 **Vorhersage.** Mit angenommenem Verzug $\hat d$ rechnet der Regler den Zustand voraus:
 
@@ -450,6 +475,18 @@ $$x_1^* = \frac{w}{k_1}\left(1 + k_2\, d + k_1\,\frac{d(d-1)}{2}\right),$$
 
 ohne Vorhersage bei $x_1^* = w/k_1$.
 
+*Herleitung mit Vorhersage* (eigene Rechnung): Im Gleichgewicht ist $x_2 = 0$ und $u^* = -w$, damit $b\,u^* + w = 0$ mit $b = 1$. Die Vorhersage liefert dann $\hat x_1 = x_1 + u^*\,d(d-1)/2$ und $\hat x_2 = d\,u^*$. Aus $u^* = -(k_1 \hat x_1 + k_2 \hat x_2)$ folgt $k_1 x_1 = w\,(1 + k_2 d + k_1 d(d-1)/2)$, also die Formel oben. Ohne Vorhersage ist $\hat x = x$ und $x_1^* = w/k_1$. Die Formel sagt nur, wo der Fixpunkt der Gleichungen liegt; erreicht wird er nur, wenn die Schleife stabil ist (ohne Vorhersage ist das nicht immer so, siehe das Handbeispiel).
+
+**Abklingzeit und Streuung.** Die Abklingzeit für den Stoß $x_0 = (1, 0)$ ist die letzte Periode, in der die Norm (Lage und Geschwindigkeit zusammen) über 1 % ihrer Spitze liegt:
+
+$$T_{1\%} = \max\{\,k : \lVert x_k \rVert_2 > 0{,}01\,\max_j \lVert x_j \rVert_2\,\}$$
+
+Die Streuung unter einer Störkraft $N(0, 1)$ je Periode sind die stationären Kosten je Periode. Mit dem Zustand $z$ der Schleife (die letzten $d+1$ Zustände $x$ und die Stellgrößen-Vergangenheit), $z_{k+1} = M z_k + g\,\xi_k$, $\xi_k \sim N(0, 1)$, $g$ wirkt auf die Geschwindigkeit, und $u_k = -r^\top z_k$ gilt:
+
+$$S = M S M^\top + g g^\top, \qquad \text{Streuung} = \operatorname{tr}(Q\,S_{xx}) + R\; r^\top S r$$
+
+Dabei ist $S_{xx}$ der Block von $S$ für den aktuellen Zustand $x_k$ (Lage und Geschwindigkeit).
+
 **Rechenzeit als Bruchteil der Periode** (Modell $B = (\tfrac12, 1)^\top$, $\theta = m + \tau$): in einer Periode wirkt zuerst $u_{k-m-1}$, nach dem Bruchteil $\tau$ dann $u_{k-m}$:
 
 $$x_{k+1} = A x_k + \Gamma_1(\tau)\,u_{k-m-1} + \Gamma_0(\tau)\,u_{k-m}$$
@@ -459,8 +496,9 @@ $$\Gamma_0 = \begin{pmatrix}(1-\tau)^2/2\\ 1-\tau\end{pmatrix},\qquad \Gamma_1 =
 **Literatur (nur so, wie gelesen).** Findeisen und Allgöwer (ADCHEM 2003, Wortlaut gelesen): Die Rechenzeit werde in Stabilitätsbeweisen oft vernachlässigt, führe aber zu einem Verzug zwischen Zustandsinformation und Stellsignal, der
 die Regelgüte stark mindern oder die Schleife instabil machen könne (nichtlineares MPC; hier wird davon nichts nachgerechnet). Wolf, Würth und Marquardt (CDC 2011, Wortlaut gelesen): ein ignorierter Rechenverzug gefährdet die Stabilität,
 als Faustregel solle das Verhältnis von Verzug zu Abtastzeit deutlich unter 1 liegen. Orzechowska (Dissertation Coventry 2014, nur das Abstract gelesen) löst eine Lieferzeit im Lager mit einem Smith-Prädiktor; Åström und Murray, Übung 12.8
-(nur der Aufgabentext gelesen). Diese Demo sagt „Vorhersage“, nicht „Smith-Prädiktor“, und behauptet keine Gleichheit mit dem dortigen Regler. Rawlings, Mayne und Diehl, Abschnitt 2.5.1 (S. 132, in eigenen Worten): beim unbeschränkten
-Problem mit Terminalkosten aus der DARE hängt der Gewinn der ersten Stufe nicht vom Horizont ab; hier gemessen für N = 1 bis 12 (README, Befund B10).
+(nur der Aufgabentext gelesen). Diese Demo sagt „Vorhersage“, nicht „Smith-Prädiktor“, und behauptet keine Gleichheit mit dem dortigen Regler. Rawlings, Mayne und Diehl, Abschnitt 2.5.1 (S. 132, in eigenen Worten; Wortlaut nach einem
+früheren Quellenbericht gelesen, die Stelle wurde beim Bau nicht erneut geöffnet): beim unbeschränkten
+Problem mit Terminalkosten aus der DARE hängt der Gewinn der ersten Stufe nicht vom Horizont ab; hier gemessen für N = 1 bis 12 (README, Zeile „MPC-Brücke“).
         """
     )
 
@@ -468,5 +506,5 @@ st.markdown("---")
 st.caption(
     "Diese Demo ist Teil des Portfolios von [Sebastian Hanisch](https://sebastianhanisch.net) – "
     "Operations Research und Machine Learning ([Über mich](https://sebastianhanisch.net/ueber-mich.html)). "
-    "Mehr zu den Demos: [Interaktive Demos](https://sebastianhanisch.net/demos.html)."
+    "Mehr zur Reihe: [Regelung von LQR bis MPC: vom Plan zur Regel](https://sebastianhanisch.net/konzepte-regelung.html)."
 )

@@ -5,7 +5,7 @@ Voraussetzung überall: Wagen, Q = I, B = [0, 1]ᵀ (B3-Gegenprobe und B7: B = [
 Die vorgerechneten Zahlen (`data/rvz_frozen.json`) werden auf Konsistenz mit ihrer Erzeugung (kleinere Neu-Rechnung) und mit der README geprüft.
 
 Zahl → Test (Auszug der README-Tabelle): B1 test_b1_*, B2 test_b2_*, B3 test_b3_*, B4 test_b4_*, B5 test_b5_*, B6 test_b6_*, B7 test_b7_*, B8 test_b8_*, B9 test_b9_*, B10 test_b10_*, B11 test_b11_*,
-B12 test_b12_*, B13 test_b13_*, B14 test_b14_*, B15 test_b15_*, B16 test_b16_*. Was nicht im Test steht, ist in der README als „Messung“, „Vormessung“ oder „Scratch-Lauf“ gekennzeichnet."""
+B12 test_b12_*, B13 test_b13_*, B14 test_b14_*, B15 test_b15_*, B16 test_b16_*. Was nicht im Test steht, ist in der README als „Messung“, „frühere Messung“ oder „früherer Rechenlauf“ gekennzeichnet."""
 
 import json
 import math
@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from rvz_rng import SplitMix64
 import make_frozen
 import rvz_constants as C
 import rvz_dynamics as K
@@ -106,8 +107,16 @@ def test_b4_random_q_counts_are_reproduced_and_stand_in_the_readme():
         for dec, (s, t) in fz["by_decade"].items():
             assert abs(live["by_decade"][dec][0] - s) <= 2 and live["by_decade"][dec][1] == t
     assert FROZEN["m5_diag"]["by_decade"] == {"-3": [0, 574], "-2": [0, 571], "-1": [63, 601], "0": [231, 583], "1": [342, 546], "2": [520, 579], "3": [546, 546]}
+    dg, vl = FROZEN["m5_diag"]["by_decade"], FROZEN["m5_voll"]["by_decade"]
+    assert dg["-3"][0] + dg["-2"][0] == 0 and dg["-3"][1] + dg["-2"][1] == 1145       # unter R = 10⁻¹ bei diagonalem Q: 0 von 1 145
+    assert vl["-3"][0] + vl["-2"][0] == 1 and vl["-3"][1] + vl["-2"][1] == 1199       # bei vollem Q: 1 von 1 199
+    shares = [100 * 1702 / 4000, 100 * 1725 / 4000, 100 * 1722 / 4000, 100 * 1761 / 3999]               # 42,55 / 43,125 / 43,05 / 44,04 %
+    assert shares == pytest.approx([42.6, 43.1, 43.1, 44.0], abs=0.06) and 43.0 < min(shares) + 0.5 and max(shares) < 44.1 and min(shares) > 42.5
     _has("**1 702 von 4 000**", "**1 725 von 4 000**", "10⁻³: 0/574, 10⁻²: 0/571, 10⁻¹: 63/601, 10⁰: 231/583, 10¹: 342/546, 10²: 520/579, 10³: 546/546", "Zufalls-Seed 1810 bzw. 1811",
-         "1 722 von 4 000", "1 761 von 3 999")
+         "1 722 von 4 000", "1 761 von 3 999", "rund 43 bis 44 %", "42,6 und 43,1 % im Bau, 43,1 und 44,0 % in der früheren Messung", "bei diagonalem Q unter R = 10⁻¹ nie",
+         "in keinem der 1 145 Entwürfe (0/574 und 0/571); bei vollem Q in 1 von 1 199", "einer 2 × 2-Matrix G aus vier unabhängigen Normalzahlen N(0, 1)")
+    retraction = "die früher genannten „43 bis 45 %“ stimmten nicht, 45 % erreicht keine Zählung"
+    assert retraction in README and "45 %" not in README.replace(retraction, "")                       # 45 % steht nur als zurückgenommene Angabe da
     assert "1 702 von 4 000" in ev.m5_text() and "1 725 von 4 000" in ev.m5_text()
 
 
@@ -154,7 +163,9 @@ def test_b7_critical_computation_time_and_the_grid_checks():
     assert live["random"]["mismatches"] == 0 and live["random"]["checked"] > 350
     fz = FROZEN["theta"]["random"]
     assert fz["mismatches"] == 0 and fz["checked"] == 5000 and fz["n_R"] == 500 and fz["seed"] == 1821
-    _has("2,114 / 1,130 / 0,800 / 0,621 / 0,464 / 0,437 / 0,434 Perioden für R = 100 / 10 / 3 / 1 / 0,1 / 0,01 / 0,001", "in 7 von 7 R genau ein Wechsel", "5 000 Zufallspunkte (500 zufällige R, Zufalls-Seed 1821): 0 Abweichungen",
+    assert fz["per_R"] == 10 and fz["n_R"] * fz["per_R"] == fz["checked"]
+    _has("2,114 / 1,130 / 0,800 / 0,621 / 0,464 / 0,437 / 0,434 Perioden für R = 100 / 10 / 3 / 1 / 0,1 / 0,01 / 0,001", "in 7 von 7 R genau ein Wechsel",
+         "5 000 Zufallspunkte (500 zufällige R = 10^U(−3, 2) mit je 10 gleichverteilt gezogenen θ zwischen 0 und 3, Zufalls-Seed 1821): 0 Abweichungen",
          "0,434 / 0,693 / 0,918 / 1,076 / 1,198", "hält R = 1 (ρ = 0,918) und R = 0,1 nicht (1,031)", "41,5° (R = 10), 59,2° (R = 1), 69,3° (R = 0,1)")
 
 
@@ -183,7 +194,7 @@ def test_b8_prediction_is_exact_in_fractions():
             M = K.loop_matrix(kk1, kk2, d, d, b=F(1), exact=True)
             ok += int(X.charpoly(M) == [1, kk2 - 2, 1 - kk2 + kk1] + [0] * (3 * d))
     assert ok == 12
-    _has("10 von 10", "Vormessung: 15 von 15 mit drei Startwerten", "12 von 12 (d = 1 bis 4, drei Gewinne", "15 von 15 bis 17 × 17", "z^(3d) (z² + (k₂ − 2) z + 1 − k₂ + k₁)")
+    _has("10 von 10", "früherer Rechenlauf: 15 von 15 mit drei Startwerten", "12 von 12 (d = 1 bis 4, drei Gewinne", "15 von 15 bis 17 × 17", "z^(3d) (z² + (k₂ − 2) z + 1 − k₂ + k₁)")
 
 
 # --- B9 --------------------------------------------------------------------------------------------------------------------------------
@@ -211,7 +222,22 @@ def test_b9_prediction_gain_equals_the_extended_dare_gain():
             G = np.array(K.pred_gain(float(Km[0, 0]), float(Km[0, 1]), d))
             worst = max(worst, float(np.max(np.abs(Ka.ravel() - G))))
     assert worst < 1e-8
-    _has("R = 10, 1, 0,1, 0,01 und d = 1 bis 6, größte Abweichung unter 10⁻⁸ (Vormessung 6,6·10⁻¹³)", "2 100 zufälligen Störungen")
+    # 2 100 zufällige Störungen des Gewinns (700 je d = 1 bis 3, R = 1, Komponenten mal 1 + 0,1·N(0, 1), Zufalls-Seed 1826): keine senkt die stationären Kosten
+    rng = SplitMix64(1826)
+    k1, k2 = K.gain(1.0)
+    total = stable = lower = 0
+    for d in (1, 2, 3):
+        G0 = K.pred_gain(k1, k2, d)
+        J0 = K.stationary_cost(G0, d, 1.0)
+        for _ in range(700):
+            G = [g * (1.0 + 0.1 * rng.normal()) for g in G0]
+            total += 1
+            if K.rho_eig(K.loop_from_gain(G, d, 1.0)) < 1.0 - 1e-9:
+                stable += 1
+                lower += int(K.stationary_cost(G, d, 1.0) < J0 * (1 - 1e-12))
+    assert total == 2100 and lower == 0 and abs(stable - 2002) <= 3
+    _has("R = 10, 1, 0,1, 0,01 und d = 1 bis 6, größte Abweichung unter 10⁻⁸ (früherer Rechenlauf 6,6·10⁻¹³)", "2 100 zufälligen Störungen des Gewinns die stationären Kosten (700 je d = 1 bis 3;",
+         "1 + 0,1·N(0, 1) multipliziert, ganzzahliger SplitMix64, Zufalls-Seed 1826; 2 002 der 2 100 gestörten Schleifen sind stabil")
 
 
 # --- B10 -------------------------------------------------------------------------------------------------------------------------------
@@ -224,7 +250,8 @@ def test_b10_mpc_bridge():
     assert dev[0] == pytest.approx(0.744, abs=5e-4) and dev[1] == pytest.approx(0.244, abs=5e-4) and dev[2] == pytest.approx(0.0006, abs=5e-5) and dev[3] < 1e-5
     fz = FROZEN["m9"]
     assert fz["1.0"]["max_dev_dare_terminal"] < 1e-9 and fz["0.1"]["max_dev_dare_terminal"] < 1e-9 and fz["1.0"]["dev_q_terminal"]["12"] < 1e-5
-    _has("N = 1 bis 12 (Abweichung unter 10⁻⁹; Messung 4,4·10⁻¹⁶ bei R = 1, 6,7·10⁻¹⁶ bei R = 0,1)", "0,744 / 0,244 / 0,0006 ab (N = 1 / 2 / 5, R = 1)", "für N = 12 um weniger als 10⁻⁵")
+    _has("N = 1 bis 12 (Abweichung unter 10⁻⁹; Messung 4,4·10⁻¹⁶ bei R = 1, 6,7·10⁻¹⁶ bei R = 0,1)", "0,744 / 0,244 / 0,0006 ab (N = 1 / 2 / 5, R = 1)", "für N = 12 um weniger als 10⁻⁵",
+         "seine erste Stufe auf den verspäteten Zustand an, ist es in diesem Modell die Schleife u_k = −K x_(k−d) (Modellierungsannahme dieser Demo, nicht gemessen)")
 
 
 # --- B11 -------------------------------------------------------------------------------------------------------------------------------
@@ -255,9 +282,13 @@ def test_b12_wrong_assumed_delay():
     assert [round(K.rho_loop(k1, k2, 1, dh), 3) for dh in (0, 2, 3)] == [1.193, 1.671, 1.855]
     live = make_frozen.falsch_dh_random(300)
     assert live["unstable"] == 300 and FROZEN["falsch_dh"] == {"n": 2000, "unstable": 2000, "seed": 1823}
+    draws = list(make_frozen.falsch_dh_draws(2000))                           # der Bereich von dh: dh = d − 2 bis d + 2, dh ≠ d, dh ≥ 0 (Irrtum um höchstens 2 Perioden)
+    assert len(draws) == 2000 and {dh - d for _, d, dh in draws} == {-2, -1, 1, 2} and min(dh for _, _, dh in draws) >= 0
+    assert {d for _, d, _ in draws} == {1, 2, 3, 4} and max(R for R, _, _ in draws) <= 1.0 and min(R for R, _, _ in draws) >= 1e-3
     _has("stabil in **24 von 75** Zellen", "R = 1 000: 15, R = 100: 8, R = 10: 1, **R = 1: 0, R = 0,1: 0**", "dh = 0 (keine Vorhersage) 1,193, dh = 2: 1,671, dh = 3: 1,855",
-         "**in 2 000 von 2 000 instabil** (Zufalls-Seed 1823)", "in 2 000 von 2 000 zufälligen Fällen instabil")
-    _has("in 2 000 von 2 000 Zufallszellen instabil (Experiment 5)", text=APP)
+         "dh gleichverteilt von d − 2 bis d + 2 (dh ≠ d, dh ≥ 0, also der angenommene Verzug um höchstens 2 Perioden daneben): **in 2 000 von 2 000 instabil** (Zufalls-Seed 1823)",
+         "in 2 000 von 2 000 zufälligen Fällen instabil", "(um höchstens 2 Perioden daneben)")
+    _has("(um höchstens 2 Perioden daneben) und R ≤ 1 ist die Vorhersage in 2 000 von 2 000 Zufallszellen instabil (Experiment 5)", text=APP)
 
 
 # --- B13 -------------------------------------------------------------------------------------------------------------------------------
@@ -277,8 +308,14 @@ def test_b13_best_static_gain_and_the_vieta_bound():
     stat_b = {r["d"]: (r["bmax"], r["rho"]) for r in ev.static_b_rows()}
     assert [round(stat_b[d][0], 2) for d in range(1, 5)] == [2.95, 3.07, 3.10, 3.11]
     _has("0,66667 bei K = (1/27, 1/3), **dreifache Wurzel 2/3, die Schranke genau erreicht (exakt in Brüchen)**", "d = 2: 0,78868; 3: 0,84495; 4: 0,87749; 5: 0,89871; 6: 0,91366",
-         "20 000 Zufallsgewinne ohne Verletzung, Zufalls-Seed 1822", "bis b = 2,95 / 3,07 / 3,10 / 3,11 (ρ = 0,667 / 0,789 / 0,845 / 0,877)", "(A − BK)² = 0")
+         "20 000 Zufallsgewinne ohne Verletzung, Zufalls-Seed 1822", "bis b = 2,95 / 3,07 / 3,10 / 3,11 (ρ = 0,667 / 0,789 / 0,845 / 0,877)", "(A − BK)² = 0",
+         "nicht erreichbar** (ohne Verzug mit K = (1, 2)", "auf dem verspäteten Zustand allein (ohne Vorhersage)", "für K = (1, 2) ist das charakteristische Polynom der Schleife z^(3d+2), exakt in Brüchen für d = 1 bis 5 geprüft")
     assert np.max(np.abs(np.linalg.matrix_power(K.A - K.B0 @ np.array([[1.0, 2.0]]), 2))) == 0.0     # Deadbeat ohne Verzug: exakt, ganze Zahlen
+    for d in range(1, 6):                                                    # mit Vorhersage und K = (1, 2): Polynom der Schleife exakt z^(3d+2), also Deadbeat (nur numerisch ρ > 0)
+        M = K.loop_matrix(F(1), F(2), d, d, b=F(1), exact=True)
+        assert X.charpoly(M) == [1] + [0] * (3 * d + 2)
+        assert K.rho_loop(1.0, 2.0, d, d) < 0.1                               # Band: schlecht konditionierte Mehrfachwurzel (gemessen 2,6·10⁻⁸ / 2,4·10⁻³ / 1,6·10⁻² / 3,0·10⁻² / 6,6·10⁻²)
+    assert all(K.rho_poly(1.0, 2.0, d) >= 2.0 / (d + 2) - 1e-9 for d in range(1, 6))        # ohne Vorhersage mit Verzug: Schranke 2/(d + 2)
 
 
 # --- B14 -------------------------------------------------------------------------------------------------------------------------------
@@ -296,6 +333,18 @@ def test_b14_steady_state_error():
     assert soft == pytest.approx([4.53, 12.6, 24.6, 40.8, 60.9], abs=0.06)
     assert pred[1] > soft[0] and all(pred[d] < soft[d - 1] for d in range(2, 6))        # d = 1 größer als der weiche Entwurf, ab d = 2 kleiner
     assert all(pred[d] > pred[0] for d in range(1, 6))
+    h1 = ev.hand_example(1)                                                  # Handbeispiel: 11/2 mit Vorhersage, 5/2 nur Fixpunkt einer instabilen Schleife
+    assert h1["x1_pred"] == F(11, 2) and h1["x1_nopred"] == F(5, 2) and h1["stable"] is False and ev.hand_example(0)["stable"] is True
+    kk1, kk2 = F(2, 5), F(6, 5)                                              # Herleitung: x̂₁ = x₁ + u* d(d−1)/2, x̂₂ = d u*, u* = −w  =>  k₁ x₁ = w (1 + k₂ d + k₁ d(d−1)/2), in Brüchen
+    for d in range(0, 7):
+        w = F(1)
+        x1 = w * (1 + kk2 * d + kk1 * F(d * (d - 1), 2)) / kk1
+        u = -w
+        xh1, xh2 = x1 + u * F(d * (d - 1), 2), d * u
+        assert u == -(kk1 * xh1 + kk2 * xh2) and X.equilibrium_x1(kk1, kk2, d, True) == x1
+    _has("Herleitung des Dauerfehlers mit Vorhersage", "x̂₁ = x₁ + u* d(d − 1)/2 und x̂₂ = d u*", "k₁ x₁ = w (1 + k₂ d + k₁ d(d − 1)/2)",
+         "die 5/2 ohne Vorhersage ist nur der Fixpunkt einer instabilen Schleife und wird nie erreicht")
+    _has("\\hat x_1 = x_1 + u^*\\,d(d-1)/2", "k_1 x_1 = w\\,(1 + k_2 d + k_1 d(d-1)/2)", text=APP)
     _has("2,369 / 5,316 / 9,264 / 14,21 / 20,16 / 27,10 (Faktor 1 / 2,24 / 3,91 / 6,00 / 8,51 / 11,44)", "27,0 / 77,6 / 153 / 255 / 381", "4,53 / 12,6 / 24,6 / 40,8 / 60,9",
          "bei d = 1 ist er größer als beim weichen Entwurf (5,32 gegen 4,53), ab d = 2 kleiner (9,26 gegen 12,6)", "(w/k₁)(1 + k₂ d + k₁ d(d − 1)/2)")
     _has("Faktor 2,24 bei d = 1, R = 1", text=APP)
@@ -332,11 +381,17 @@ def test_b15_costs_and_decay_times():
     krit = ev.krit_rows()
     assert [ev.decay_of(k1, k2, d, d, K.rho_poly(k1, k2, 0))[0] for d in range(5)] == [5, 6, 7, 8, 9]
     assert [r["decay_soft"] for r in krit[:4]] == [213, 314, 434, 548] and krit[7]["decay_soft"] == 996
+    assert [r["decay_d0"] for r in krit] == [11, 21, 30, 40, 49, 58, 68, 77]    # fairer Vergleich: derselbe große R (1,2 · R_krit) ohne Verzug
+    for r in krit[:4]:
+        assert ev.takt(r["R_soft"], 0).decay == r["decay_d0"] and ev.takt(r["R_soft"], r["d"]).decay == r["decay_soft"]
     stat = [ev.decay_of(FROZEN["static_best"]["rho"][str(d)]["k1"], FROZEN["static_best"]["rho"][str(d)]["k2"], d, 0, FROZEN["static_best"]["rho"][str(d)]["rho"])[0] for d in range(1, 5)]
     assert stat == [21, 37, 52, 67] and [b - a for a, b in zip(stat, stat[1:])] == [16, 15, 15]
     _has("ohne Verzug 2,947 (= P₁₁)", "3,947 / 4,947 / 5,947 / 6,947 für d = 1 bis 4", "33,9 / 67,9 / 101,8 / 135,7 %; genau P₁₁ + d", "11,58 / 13,13 / 16,70 / 20,61 (+293 bis +599 %)",
          "4,646 / 6,855 / 9,193 / 11,57 (+58 / +133 / +212 / +293 %)", "ohne Verzug 4,613; Vorhersage 13,30 / 28,88 / 53,35 / 88,72; beste statische 21,61 / 74,86 / 189,0 / 388,4; weicher Entwurf 102,6 / 276,1 / 663,3 / 1 336",
-         "Vorhersage 5 / 6 / 7 / 8 / 9 Perioden; weicher Entwurf 213 / 314 / 434 / 548 (d = 1 bis 4; bis d = 8: 996); beste statische Verstärkung 21 / 37 / 52 / 67", "um genau 1 je d, bei der besten statischen Verstärkung um 15 bis 16")
+         "Vorhersage 5 / 6 / 7 / 8 / 9 Perioden; weicher Entwurf (R = 1,2 · R_krit) 213 / 314 / 434 / 548 (d = 1 bis 4; bis d = 8: 996); beste statische Verstärkung 21 / 37 / 52 / 67", "um genau 1 je d, bei der besten statischen Verstärkung um 15 bis 16",
+         "klingt ohne Verzug nach 11 / 21 / 30 / 40 Perioden ab (d = 1 bis 4; 49 / 58 / 68 / 77 für d = 5 bis 8)", "derselbe große R ohne Verzug klingt nach 11 bis 40 Perioden ab",
+         "die kleinste Zahl unter den Gesetzen mit Verzug")
+    _has("Zeile „Kosten und Abklingzeit nach dem Stoß“", "Zeile „MPC-Brücke“")
 
 
 # --- B16 -------------------------------------------------------------------------------------------------------------------------------

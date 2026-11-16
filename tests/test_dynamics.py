@@ -1,4 +1,4 @@
-"""Einheiten von Hand (Handbeispiele 1 bis 5 des Plans): Bruch gleich Bruch, wo es geht; Gleitkomma nur als Band.
+"""Einheiten von Hand (fünf Handbeispiele): Bruch gleich Bruch, wo es geht; Gleitkomma nur als Band.
 
 Jeder Erwartungswert steht hier als Rechnung oder als von Hand hergeleiteter Bruch, nicht als Abschrift der Ausgabe des Codes."""
 

@@ -4,7 +4,7 @@ Aufruf (Wurzelordner des Repos): `python tools/make_frozen.py` (etwa eine bis zw
 Zufall nur aus dem ganzzahligen SplitMix64 (`rvz_rng.py`), nie Python-`hash()` oder `random`. Die Funktionen sind so geschrieben, dass tests/ sie in kleinerer
 Größe neu rechnen kann (Parameter `n`); die Nelder–Mead-Optima sind keine Beweise für das globale Minimum und plattformabhängig im letzten Bit (Band in den Tests).
 
-Die Messlogik ist neu geschrieben (nicht aus den Planungsskripten `rg_v18_*` kopiert); Zahlen der Vormessung gelten als Erwartung und werden hier neu gemessen."""
+Die Messlogik ist neu geschrieben (nicht aus früheren Messskripten kopiert); Zahlen früherer Messungen gelten als Erwartung und werden hier neu gemessen."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def _uniform(rng: SplitMix64, lo: float, hi: float) -> float:
     return lo + (hi - lo) * rng.random()
 
 
-# --- M5: Zufallsentwürfe mit d = 1 ---------------------------------------------------------------------------------------------------
+# --- Zufallsentwürfe mit d = 1 ---------------------------------------------------------------------------------------------------
 
 def m5_counts(kind: str, n: int = 4000) -> dict:
     """Q diagonal (Einträge 10^U(−2, 2)) oder voll (G Gᵀ + 10⁻³ I, G aus Normalzahlen), R = 10^U(−3, 4); stabil mit d = 1 (Spektralradius aus P_1)."""
@@ -127,7 +127,7 @@ def largest_stable_d(Rs=(1e5, 1e4, 3e3, 1e3, 300.0, 100.0, 30.0, 10.0, 3.0, 1.0,
     return {"dmax": dmax, "by_R": out}
 
 
-# --- C6: beste statische Verstärkung ohne Vorhersage -------------------------------------------------------------------------------------
+# --- Beste statische Verstärkung ohne Vorhersage -------------------------------------------------------------------------------------
 
 def best_rho(d: int) -> dict:
     """Kleinster gefundener Spektralradius einer statischen Verstärkung u = −K x_{k−d} (Gitter 101 × 151, dann Nelder–Mead); kein Beweis für das globale Minimum."""
@@ -204,21 +204,28 @@ def vieta_random(n: int = 20000) -> dict:
     return {"n": n, "violations": viol, "max_sum_dev": maxs, "seed": SEEDS["vieta"]}
 
 
-# --- C4/C5 -----------------------------------------------------------------------------------------------------------------------------
+# --- Falsch angenommener Verzug, Toleranz gegen b -----------------------------------------------------------------------------------------------------------------------------
 
-def falsch_dh_random(n: int = 2000) -> dict:
-    """n zufällige (R, d, dh): R = 10^U(−3, 0) (R ≤ 1), d ∈ 1 … 4, dh ≠ d mit |dh − d| ≤ 2 und dh ≥ 0: Zahl der instabilen Schleifen."""
+def falsch_dh_draws(n: int):
+    """n zufällige (R, d, dh): R = 10^U(−3, 0) (R ≤ 1), d ∈ 1 … 4, dh = d + k mit k gleichverteilt aus −2 … 2, ohne k = 0 und ohne dh < 0 (der Irrtum beträgt 1 oder 2 Perioden)."""
     rng = SplitMix64(SEEDS["falsch_dh"])
-    unstable = tot = 0
+    tot = 0
     while tot < n:
         R = 10.0 ** _uniform(rng, -3, 0)
         d = 1 + rng.below(4)
         dh = d + (rng.below(5) - 2)
         if dh == d or dh < 0:
             continue
+        tot += 1
+        yield R, d, dh
+
+
+def falsch_dh_random(n: int = 2000) -> dict:
+    """n zufällige (R, d, dh) aus `falsch_dh_draws` (Irrtum um höchstens 2 Perioden): Zahl der instabilen Schleifen."""
+    unstable = 0
+    for R, d, dh in falsch_dh_draws(n):
         k1, k2 = D.gain(R)
         unstable += int(D.rho_loop(k1, k2, d, dh) >= 1.0)
-        tot += 1
     return {"n": n, "unstable": unstable, "seed": SEEDS["falsch_dh"]}
 
 

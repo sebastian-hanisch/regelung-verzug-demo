@@ -1,11 +1,11 @@
 """Kern der Demo (nur numpy und scipy): der Wagen mit Verzug, die Wurzeln der Schleife, die Vorhersage, Kosten und Dauerfehler.
 
 Modell (alles eigene Herleitung in diesem Modell, bei diesen Parametern): Wagen x_{k+1} = A x_k + B (b u_k + w), A = [[1, 1], [0, 1]], Q = I, Ts = 1 Periode.
-Zwei Fassungen von B: die Linien-Fassung B = [0, 1]ᵀ (ganzzahlige Verzüge) und die exakte Abtast-Halte-Fassung B = [½, 1]ᵀ (Rechenzeit als Bruchteil der Periode).
+Zwei Fassungen von B: die Standardfassung B = [0, 1]ᵀ (ganzzahlige Verzüge) und die exakte Abtast-Halte-Fassung B = [½, 1]ᵀ (Rechenzeit als Bruchteil der Periode).
 Das Gesetz u_k = −K x_{k−d} nutzt den Gewinn K der DARE des Entwurfs ohne Verzug; bis k = d − 1 liegt keine Messung vor (blind: u = 0).
 Mit Vorhersage: x̂_k = A^dh x_{k−d} + Σ_{j<dh} A^(dh−1−j) B u_{k−dh+j}, u_k = −K x̂_k.
 
-Die Skripte `rg_v18_*` der Planung sind Wegwerf und werden nicht importiert; die Messlogik ist hier neu geschrieben. Die Zustandsmatrizen entstehen direkt (nicht durch
+Frühere Messskripte (nicht im Repository) werden nicht importiert; die Messlogik ist hier neu geschrieben. Die Zustandsmatrizen entstehen direkt (nicht durch
 Probieren), die Gegenprobe mit dem Probieren steht in tests/test_oracle_regelung_verzug.py.
 """
 
@@ -18,7 +18,7 @@ import numpy as np
 import scipy.linalg as la
 
 A = np.array([[1.0, 1.0], [0.0, 1.0]])
-B0 = np.array([[0.0], [1.0]])        # Linien-Fassung
+B0 = np.array([[0.0], [1.0]])        # Standardfassung
 B_ZOH = np.array([[0.5], [1.0]])     # exakte Abtast-Halte-Diskretisierung von x'' = u
 Q = np.eye(2)
 PHI = (1.0 + math.sqrt(5.0)) / 2.0
@@ -30,7 +30,7 @@ R_GRID_LO, R_GRID_HI, R_GRID_PER_DECADE = -3.0, 7.0, 10   # grobes Gitter der Bi
 
 @lru_cache(maxsize=4096)
 def lqr(R: float, B_key: str = "B0") -> tuple[np.ndarray, np.ndarray]:
-    """DARE-Lösung P und Gewinn K (u = −K x) des Wagens, Q = I, Kostengewicht R. B_key: "B0" (Linie) oder "ZOH"."""
+    """DARE-Lösung P und Gewinn K (u = −K x) des Wagens, Q = I, Kostengewicht R. B_key: "B0" (Standardfassung) oder "ZOH"."""
     if not (math.isfinite(R) and R > 0):
         raise ValueError(f"Kostengewicht R muss endlich und positiv sein, nicht {R}")
     B = B0 if B_key == "B0" else B_ZOH
@@ -130,7 +130,7 @@ def _stable_design(R: float, d: int, B_key: str) -> bool:
 def r_krit(d: int, B_key: str = "B0") -> float | None:
     """Kleinstes R des DARE-Entwurfs (Q = I), ab dem die Schleife mit d Perioden Verzug stabil ist (Bisektion auf log R, grobes Gitter 10 je Dekade).
 
-    B_key "B0": B = [0, 1]ᵀ (Linie), "ZOH": B = [½, 1]ᵀ. Voraussetzung (gemessen, nicht bewiesen): genau ein Wechsel instabil → stabil auf dem Gitter
+    B_key "B0": B = [0, 1]ᵀ (Standardfassung), "ZOH": B = [½, 1]ᵀ. Voraussetzung (gemessen, nicht bewiesen): genau ein Wechsel instabil → stabil auf dem Gitter
     von 4 001 Punkten (vorgerechnet, data/rvz_frozen.json). d = 0: None (immer stabil)."""
     if d <= 0:
         return None
@@ -299,7 +299,7 @@ def equilibrium_x1(G: list, d: int, w: float = 1.0) -> float:
 
 
 def equilibrium_formula(k1: float, k2: float, d: int, w: float = 1.0, predict: bool = True) -> float:
-    """x1* = (w/k1)(1 + k2 d + k1 d (d−1)/2) mit Vorhersage, w/k1 ohne (eigene Herleitung, Handbeispiel 4)."""
+    """x1* = (w/k1)(1 + k2 d + k1 d (d−1)/2) mit Vorhersage, w/k1 ohne (eigene Herleitung: siehe Expander „Mathematische Formulierung“ der App, Abschnitt Dauerfehler). Gleichgewichtslage heißt Fixpunkt der Gleichungen; erreicht wird er nur bei stabiler Schleife."""
     if not predict:
         return w / k1
     return (w / k1) * (1 + k2 * d + k1 * d * (d - 1) / 2)
